@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Materia — turn curiosity into a course</title>
+  <meta name="description" content="Build a rigorous, personal course from your questions, theories, and source material." />
+  <script>if(location.protocol==='file:')location.replace('http://127.0.0.1:4173/');</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="grain"></div>
+  <section id="builder" class="builder-view">
+    <nav class="topbar">
+      <a class="brand" href="#"><span class="brand-mark">M</span><span>materia</span></a>
+      <div class="nav-right"><span class="nav-note">Learning, made yours.</span><button class="avatar">DK</button></div>
+    </nav>
+
+    <main class="builder-shell">
+      <div class="builder-copy">
+        <div class="eyebrow"><span>01</span> START ANYWHERE</div>
+        <h1>Anything can become<br><em>a field of study.</em></h1>
+        <p class="lede">A language. A scientific mystery. A practical craft. A cultural movement. Bring any question and Materia builds the rigorous, human course around it.</p>
+        <div class="topic-examples"><span>TRY AN IDEA</span><button type="button">Regenerative agriculture</button><button type="button">Jazz improvisation</button><button type="button">Quantum computing</button><button type="button">Furniture design</button></div>
+        <div class="universal-visual" aria-label="A collage representing learning across arts, sciences, craft, and technology"><div class="visual-caption"><b>ONE CURIOSITY</b><span>Every way into it</span></div></div>
+        <div class="source-box">
+          <div class="source-icon">↗</div>
+          <div><strong>Add your source material</strong><span>Papers, notes, links, recordings, or half-formed theories</span></div>
+          <label class="upload-btn" for="fileInput">Choose files</label>
+          <input id="fileInput" type="file" multiple hidden>
+        </div>
+        <div id="fileChips" class="file-chips"></div>
+      </div>
+
+      <form id="courseForm" class="intake-card">
+        <div class="card-kicker">YOUR STARTING POINT</div>
+        <label class="big-label" for="topic">What do you want to learn?</label>
+        <textarea id="topic" rows="4" required placeholder="Be specific, broad, practical, or wonderfully strange…"></textarea>
+
+        <div class="question-block">
+          <div class="q-number">1</div>
+          <div class="q-content"><label for="lens">What kind of mastery are you after?</label><select id="lens"><option>Deep understanding across the whole field</option><option>Practical, real-world capability</option><option>Academic or professional preparation</option><option>Build an original point of view</option></select></div>
+        </div>
+        <div class="question-block">
+          <div class="q-number">2</div>
+          <div class="q-content"><label for="outcome">Where are you starting?</label><select id="outcome"><option>Curious beginner—assume nothing</option><option>I know the basics</option><option>I work or study in an adjacent field</option><option>Advanced—challenge me</option></select></div>
+        </div>
+        <div class="question-block">
+          <div class="q-number">3</div>
+          <div class="q-content"><label for="style">How do you learn best?</label><select id="style"><option>A thoughtful mix—show, tell, try, reflect</option><option>Visuals, maps, and demonstrations</option><option>Reading, writing, and discussion</option><option>Projects, experiments, and fieldwork</option></select></div>
+        </div>
+        <button class="primary-btn" type="submit"><span>Map my learning path</span><b>→</b></button>
+        <p class="privacy">Files are processed by this local server. Connected AI mode sends selected excerpts to the configured model provider.</p>
+      </form>
+    </main>
+    <div class="builder-footer"><span>Live research, visible sources</span><span>•</span><span>You choose the pace</span><span>•</span><span>No hidden evidence</span></div>
+  </section>
+
+  <section id="research" class="research-view hidden">
+    <div class="research-orbit"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div><span class="core">M</span></div>
+    <div class="eyebrow light"><span>02</span> MAPPING THE FIELD</div>
+    <h2>Building your intellectual<br><em>constellation.</em></h2>
+    <p id="researchStatus">Mapping the language, history, evidence, and practice of your subject…</p>
+    <div class="research-meter"><i id="researchBar"></i></div>
+    <div class="research-trust"><span>LIVE · Crossref scholarship</span><span>Wikipedia & Open Library</span><span>YouTube & GitHub discovery</span></div>
+    <div class="research-stats"><div><b id="sourceCount">0</b><span>scholarly records mapped</span></div><div><b id="disciplineCount">0</b><span>videos & tools found</span></div><div><b>UG→GRAD</b><span>curriculum arc</span></div></div>
+  </section>
+
+  <section id="length" class="length-view hidden">
+    <nav class="topbar"><a class="brand" href="#"><span class="brand-mark">M</span><span>materia</span></a><button class="text-btn" id="backToBuilder">← Edit direction</button></nav>
+    <main class="length-shell">
+      <div class="eyebrow"><span>03</span> CHOOSE YOUR COMMITMENT</div>
+      <h2>A course that fits your life.<br><em>Not the other way around.</em></h2>
+      <p>The intellectual arc stays rigorous. We’ll tune the number of readings, projects, and pathways to the time you have.</p>
+      <div class="length-options">
+        <button class="length-card" data-weeks="4"><span class="duration">4 weeks</span><strong>The focused inquiry</strong><small>4–5 hours / week</small><div class="mini-map"><i></i><i></i><i></i><i></i></div><p>One sharp question. Essential texts. A final synthesis you can use.</p></button>
+        <button class="length-card selected" data-weeks="12"><span class="duration">12 weeks</span><strong>The deep semester</strong><small>6–8 hours / week</small><div class="mini-map twelve"><i></i><i></i><i></i><i></i><i></i><i></i></div><p>A complete college-level arc with labs, seminars, and an original capstone.</p><b class="popular">RECOMMENDED</b></button>
+        <button class="length-card" data-weeks="24"><span class="duration">24 weeks</span><strong>The personal degree</strong><small>8–10 hours / week</small><div class="mini-map twenty"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>Graduate-level depth, multiple electives, mentorship prompts, and a thesis.</p></button>
+      </div>
+      <button id="buildCourse" class="primary-btn wide"><span>Build my course</span><b>→</b></button>
+    </main>
+  </section>
+
+  <section id="course" class="course-view hidden">
+    <aside class="course-sidebar">
+      <a class="brand inverse" href="#"><span class="brand-mark">M</span><span>materia</span></a>
+      <div class="course-id"><span>YOUR COURSE</span><h3 id="courseName">Your learning journey</h3><p id="courseSubtitle">Foundations, practice & original work</p></div>
+      <div class="overall-progress"><div><span>Course progress</span><b id="percentLabel">18%</b></div><i><em id="progressFill"></em></i></div>
+      <nav id="moduleNav" class="module-nav"></nav>
+      <div class="sidebar-bottom"><button id="feedbackBtn">✦ &nbsp; Feedback studio <em>A</em></button><button id="sourcesBtn">⌁ &nbsp; Source library <em id="sourceTotal">186</em></button><button id="glossaryBtn">⌘ &nbsp; Course glossary</button><div><span>🔥</span><p><b id="streakNum">3 day streak</b><small>Keep the inquiry alive</small></p></div></div>
+    </aside>
+
+    <main class="lesson-main">
+      <header class="lesson-topbar"><button id="mobileMenu">☰</button><div class="crumbs"><span id="crumbCourse">YOUR COURSE</span><b>/</b><span id="crumbModule">FOUNDATIONS</span></div><div class="top-actions"><button id="searchBtn" aria-label="Search course">⌕</button><button id="notesBtn">Notes <span id="noteCount">2</span></button><button class="avatar dark">DK</button></div></header>
+      <div class="lesson-wrap">
+        <div class="evidence-strip"><span>✓ EVIDENCE CURRENT</span><p>Last reviewed today · 12 sources support this lesson</p><button id="lessonSourcesBtn">Review sources →</button></div>
+        <div id="researchWatch" class="research-watch"><i></i><div><b>Research watch is active</b><span id="researchWatchText">Generation, grading, and tutoring each trigger a fresh evidence check.</span></div><button id="refreshResearch">Check now</button></div>
+        <div class="lesson-heading"><div><div class="eyebrow"><span id="lessonCode">1.2</span> CORE LESSON</div><h1 id="lessonTitle">How this field sees the world</h1><p id="lessonDek">Meet the central ideas, methods, and tensions that organize this subject.</p></div><div class="lesson-meta"><span>◷ 42 min</span><span>◉ 120 XP</span></div></div>
+
+        <div class="lesson-tabs"><button class="active" data-tab="learn">Learn</button><button data-tab="read">Sources <span>4</span></button><button data-tab="practice">Practice</button><button data-tab="discuss">Studio <span>8</span></button><button data-tab="feedback">Feedback</button></div>
+
+        <section id="learn" class="tab-panel active">
+          <div class="mode-picker"><div><span>CHOOSE A WAY IN</span><p>Same learning goal, different cognitive doorways.</p></div><button class="active" data-mode="watch"><i>▶</i><b>Watch</b><small>14 min</small></button><button data-mode="listen"><i>◉</i><b>Listen</b><small>18 min</small></button><button data-mode="map"><i>⌘</i><b>Explore</b><small>Concept map</small></button><button data-mode="readmode"><i>¶</i><b>Read</b><small>12 min</small></button></div>
+          <div class="video-card"><div class="video-visual topic-visual"><button id="playBtn">▶</button><span class="video-label">FIELD GUIDE · 14:08</span></div><div class="video-copy"><span>VISUAL EXPLAINER</span><h3 id="videoTitle">The idea that unlocks the field</h3><p id="videoDescription">A concise visual tour of the concepts you’ll use throughout this course—and where experts still disagree.</p><div class="media-tools"><button>CC</button><button>Transcript</button><button>1×</button></div></div></div>
+          <div class="concept-map"><div><span>INTERACTIVE MAP</span><h3>See how the ideas connect</h3><p>Tap any node to trace its evidence, examples, and counterarguments.</p></div><div class="map-canvas"><button class="node n1">History</button><button class="node n2">Core ideas</button><button class="node n3">Methods</button><button class="node n4">Debates</button><button class="node n5">Practice</button><svg viewBox="0 0 420 180" aria-hidden="true"><path d="M55 90 C130 20 170 80 215 80 S300 15 365 55 M55 90 C140 155 190 115 215 80 S300 155 365 135"/></svg></div></div>
+          <article class="textbook">
+            <div class="section-label">TEXTBOOK · CHAPTER 1.2</div>
+            <h2 id="chapterTitle">Every field has a lens.<br><em>Learn to see through it.</em></h2>
+            <p id="chapterIntro">Deep learning begins when disconnected facts become a working mental model. This chapter introduces the field’s foundational questions, the tools used to answer them, and the assumptions worth examining.</p>
+            <aside class="margin-note"><b>MAKE A CONNECTION</b><p id="connectionPrompt">Where have you already encountered this subject in daily life—without naming it?</p><button id="addNote">+ Add a note</button></aside>
+            <h3 id="sectionTitle">From information to a working model</h3>
+            <p id="sectionBody">Experts do more than remember information. They notice patterns, choose useful representations, test competing explanations, and revise their understanding when evidence changes.</p>
+            <blockquote id="dynamicQuote">A strong course does not give you a pile of answers. It changes the quality of your questions.<cite>— Your course orientation</cite></blockquote>
+          </article>
+          <div class="concept-check"><div><span>QUICK CHECK · +20 XP</span><h3>What marks the shift from information to understanding?</h3></div><div class="answers"><button data-correct="false"><i>A</i> Memorizing every term before attempting a problem</button><button data-correct="true"><i>B</i> Building a model you can test, explain, and revise</button><button data-correct="false"><i>C</i> Finding one authoritative answer and protecting it</button></div><p id="answerFeedback"></p></div>
+          <button id="completeLesson" class="primary-btn complete"><span>Complete lesson</span><b>→</b></button>
+        </section>
+
+        <section id="read" class="tab-panel"><div class="resource-list"><h2>Evidence for this lesson</h2><p>A deliberately small stack across primary research, synthesis, criticism, and public explanation.</p><article><span>01</span><div><b id="reading1">Foundational overview</b><p>Peer-reviewed synthesis · Essential concepts</p></div><em>28 pages</em><button>Open ↗</button></article><article><span>02</span><div><b id="reading2">The field’s landmark work</b><p>Primary source · Guided annotations included</p></div><em>22 pages</em><button>Open ↗</button></article><article><span>03</span><div><b id="reading3">A productive disagreement</b><p>Two respected perspectives · Read side by side</p></div><em>31 pages</em><button>Compare ↗</button></article><article><span>04</span><div><b id="reading4">A clear public explanation</b><p>Expert-authored · Editorially reviewed</p></div><em>12 min</em><button>Open ↗</button></article></div></section>
+        <section id="practice" class="tab-panel"><div class="practice-card"><span>TRANSFER LAB · 45 MIN · 180 XP</span><h2 id="practiceTitle">Use the lens in the real world</h2><p id="practiceIntro">Choose a situation outside the course and analyze it using this lesson’s central model. The goal is transfer: proving that the idea changes what you can notice or do.</p><ol><li>Document what you notice before using the model.</li><li>Apply the model and capture what becomes newly visible.</li><li>Test your interpretation against one credible source.</li><li>Explain where the model works—and where it breaks.</li></ol><button class="primary-btn"><span>Begin transfer lab</span><b>→</b></button></div></section>
+        <section id="discuss" class="tab-panel"><div class="discussion"><span>COLLABORATIVE STUDIO</span><h2 id="discussionPrompt">What is one assumption a beginner brings to this subject that an expert would challenge?</h2><textarea placeholder="Develop your position, cite evidence, or share a work in progress…"></textarea><button class="primary-btn"><span>Share for critique</span><b>→</b></button></div></section>
+        <section id="feedback" class="tab-panel"><div class="feedback-studio"><div class="feedback-head"><div><span>INTELLIGENT ASSESSMENT</span><h2>Feedback that helps you think better</h2><p>Graded against transparent criteria, course evidence, and your own prior work—not a generic answer key.</p></div><div class="mastery-ring"><b id="masteryScore">84</b><small>MASTERY</small></div></div><div class="draft-evaluator"><div><span>SUBMIT A DRAFT OR RESPONSE</span><p>Your work is checked for reasoning, evidence, transfer, originality, and improvement over prior attempts.</p></div><textarea id="draftInput" placeholder="Write or paste your response here…"></textarea><button id="evaluateDraft">Evaluate my thinking <b>→</b></button></div><div class="rubric-grid"><article><span>Conceptual accuracy</span><b id="accuracyLabel">Strong</b><i id="accuracyBar" style="--score:88%"></i><p>Your core model is accurate. Distinguish correlation from mechanism more carefully.</p></article><article><span>Use of evidence</span><b id="evidenceLabel">Developing</b><i id="evidenceBar" style="--score:72%"></i><p>You cite relevant material; now explain why that evidence changes the conclusion.</p></article><article><span>Transfer & originality</span><b id="transferLabel">Excellent</b><i id="transferBar" style="--score:94%"></i><p>Your real-world analogy is novel and structurally sound.</p></article></div><div class="coach-note"><div class="coach-avatar">M</div><div><b>Your next best move</b><p id="coachFeedback">Revise the middle paragraph as a comparison: state two competing explanations, identify the evidence each predicts, then tell me what observation would change your mind.</p><button id="revisionBtn">Start a guided revision →</button></div></div><div class="tutor-lab"><div><span>RESEARCHING TUTOR</span><h3>Ask beyond the lesson</h3><p>The tutor checks the current literature before answering and shows the sources it used.</p></div><textarea id="tutorQuestion" placeholder="Ask a difficult question, test an assumption, or request another explanation…"></textarea><button id="askTutor">Research & answer <b>→</b></button><div id="tutorAnswer" class="tutor-answer hidden"></div></div><div class="grading-trace"><span>WHY THIS GRADE</span><button>View rubric</button><button>See cited evidence</button><button>Compare revision history</button><button>Challenge feedback</button></div></div></section>
+      </div>
+    </main>
+  </section>
+
+  <div id="sourceModal" class="source-modal hidden" role="dialog" aria-modal="true" aria-labelledby="sourceTitle">
+    <div class="source-backdrop" id="sourceBackdrop"></div>
+    <section class="source-drawer">
+      <header><div><div class="eyebrow"><span>LIVE</span> EVIDENCE BASE</div><h2 id="sourceTitle">Source library</h2><p>The scholarship behind your course—inspectable, editable, and always in sync.</p></div><button id="closeSources" aria-label="Close source library">×</button></header>
+      <div class="quality-bar"><div><b>LIVE</b><span>research status</span></div><div><b>↗</b><span>inspectable links</span></div><div><b id="drawerCount">0</b><span>active sources</span></div><button id="methodBtn">Review methodology</button></div>
+      <div id="methodology" class="methodology hidden"><b>What is—and is not—verified</b><p>Journal records come from Crossref; “journal article” does not by itself prove peer review, so the journal’s policy should be checked before a source is treated as authoritative. Books come from Open Library, overviews from Wikipedia, tools from GitHub, and videos from YouTube. Citation counts, authorship, venue, recency, conflicts, and retractions require deeper verification before high-stakes use. Uploaded material is treated as the learner’s perspective, not automatically as fact.</p></div>
+      <form id="addSourceForm" class="add-source"><input id="sourceInput" required placeholder="Paste a DOI, title, or source URL"><button type="submit">+ Add for verification</button></form>
+      <div class="source-toolbar"><div><button class="source-filter active" data-filter="all">All <span id="allCount">0</span></button><button class="source-filter" data-filter="peer">Journal records</button><button class="source-filter" data-filter="publication">Books, references & video</button></div><label>Sort <select id="sourceSort"><option>Course relevance</option><option>Most cited</option><option>Newest first</option></select></label></div>
+      <div id="sourceList" class="source-list"></div>
+      <footer><p><i></i><span><b id="syncTitle">Course is in sync</b><small id="syncText">All lesson content reflects your current source library.</small></span></p><button id="doneSources">Done</button></footer>
+    </section>
+  </div>
+
+  <div id="toast" class="toast">Note added to your course journal.</div>
+  <script src="app.js"></script>
+</body>
+</html>
