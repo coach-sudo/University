@@ -1,7 +1,7 @@
 const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
 const views=['builder','research','length','course'];
-const state={status:null,research:null,course:null,materials:[],weeks:12,progress:0,activeSourceFilter:'all',attempts:[],watchTimer:null,watchBusy:false};
+const state={status:null,research:null,course:null,courseRecord:null,materials:[],weeks:12,progress:0,activeSourceFilter:'all',attempts:[],notes:[],watchTimer:null,watchBusy:false,persistence:false};
 
 function showView(id){views.forEach(view=>$(`#${view}`).classList.toggle('hidden',view!==id));window.scrollTo(0,0)}
 function toast(message,type='info'){const el=$('#toast');el.textContent=message;el.dataset.type=type;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000)}
@@ -15,6 +15,28 @@ async function api(path,body){
   if(!response.ok)throw new Error(data.error||`Request failed (${response.status})`);return data;
 }
 
+async function persistState(event){
+  try{
+    const result=await api('/api/prototype-state',event);
+    state.persistence=true;
+    return result;
+  }catch(error){
+    state.persistence=false;
+    console.debug('Persistence unavailable:',error.message);
+    return null;
+  }
+}
+
+async function loadPersistentState(){
+  const saved=await persistState(null);
+  if(!saved?.course)return;
+  state.courseRecord=saved.course;
+  state.course=saved.course.courseGraph;
+  state.attempts=(saved.attempts||[]).map(attempt=>({score:attempt.score,feedback:attempt.feedback,dimensions:attempt.dimensions,trace:attempt.trace,submittedAt:attempt.createdAt}));
+  state.notes=saved.notes||[];
+  $('#noteCount').textContent=state.notes.length;
+}
+
 async function loadStatus(){
   try{
     state.status=await api('/api/status');
@@ -25,6 +47,7 @@ async function loadStatus(){
   }catch(error){
     const banner=document.createElement('div');banner.className='system-banner offline';banner.innerHTML='<i></i><div><b>Backend is not running</b><span>Open http://127.0.0.1:4173 — the file:// page cannot perform research.</span></div>';$('#courseForm').prepend(banner);
   }
+  await loadPersistentState();
 }
 
 $$('.topic-examples button').forEach(button=>button.addEventListener('click',()=>{$('#topic').value=button.textContent;$('#topic').focus()}));
@@ -68,7 +91,10 @@ $('#buildCourse').addEventListener('click',async()=>{
   if(!state.research){showView('builder');return}
   const button=$('#buildCourse');button.disabled=true;button.querySelector('span').textContent=state.status?.aiConfigured?'Synthesizing with AI…':'Building from source map…';
   try{
-    state.course=await api('/api/course',{research:state.research,weeks:state.weeks,answers:{lens:$('#lens').value,outcome:$('#outcome').value,style:$('#style').value}});if(state.course.liveResearch)state.research=state.course.liveResearch;renderCourse();startResearchWatch();showView('course');toast(state.course.notice||`Course built from ${state.course.provenance?.sourceCount||allSources().length} live sources.`);
+    state.course=await api('/api/course',{research:state.research,weeks:state.weeks,answers:{lens:$('#lens').value,outcome:$('#outcome').value,style:$('#style').value}});if(state.course.liveResearch)state.research=state.course.liveResearch;
+    const persisted=await persistState({type:'course',course:state.course,research:state.research,weeks:state.weeks});
+    state.courseRecord=persisted?.course||null;
+    renderCourse();startResearchWatch();showView('course');toast(state.course.notice||`Course built from ${state.course.provenance?.sourceCount||allSources().length} live sources.`);
   }catch(error){toast(`Course generation failed: ${error.message}`,'error')}
   finally{button.disabled=false;button.querySelector('span').textContent='Build my course'}
 });
@@ -170,6 +196,7 @@ $('#evaluateDraft').addEventListener('click',async()=>{
   const button=$('#evaluateDraft');button.disabled=true;button.firstChild.textContent='Evaluating evidence… ';
   try{
     const result=await api('/api/grade',{topic:state.research.topic,response,sources:state.course.lesson.readings,previousScores:state.attempts.map(x=>x.score)});state.attempts.push({...result,response,submittedAt:new Date().toISOString()});$('#masteryScore').textContent=result.score;
+    await persistState({type:'attempt',courseId:state.courseRecord?.id,prompt:state.course.assessment.prompt,response,result});
     const map=[['accuracy',result.dimensions.conceptualAccuracy],['evidence',result.dimensions.evidenceUse],['transfer',result.dimensions.transfer]];map.forEach(([id,score])=>{$(`#${id}Bar`).style.setProperty('--score',score+'%');$(`#${id}Label`).textContent=score>=88?'Excellent':score>=75?'Strong':score>=60?'Developing':'Needs revision'});
     const fresh=result.researchCheck?.newEvidence||[];$('#coachFeedback').innerHTML=`${escapeHtml(result.feedback)} <small>Trace: ${result.trace.evidenceMarkers} evidence markers, ${result.trace.reasoningMarkers} reasoning markers, ${result.trace.matchedSources} named source matches. Research rechecked ${new Date(result.researchCheck.checkedAt).toLocaleTimeString()} across ${result.researchCheck.papersChecked} records.</small>${fresh.length?`<span class="fresh-evidence">Fresh evidence to consider: ${fresh.map(source=>`<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)}</a>`).join('')}</span>`:''}`;$('#researchWatchText').textContent=`Grading check ${new Date(result.researchCheck.checkedAt).toLocaleTimeString()}: ${result.researchCheck.papersChecked} papers checked · ${fresh.length} potentially new.`;toast(`Assessment complete · ${result.score}% · research refreshed`);
   }catch(error){toast(`Assessment failed: ${error.message}`,'error')}finally{button.disabled=false;button.firstChild.textContent='Evaluate my thinking '}
@@ -178,11 +205,11 @@ $('#evaluateDraft').addEventListener('click',async()=>{
 $('#revisionBtn').addEventListener('click',()=>{$('#draftInput').focus();toast('Revision mode: strengthen the claim, evidence, counterargument, and change-your-mind condition.')} );
 $('#askTutor').addEventListener('click',async()=>{
   const question=$('#tutorQuestion').value.trim();if(question.length<8){toast('Ask a little more specifically so the tutor can research it.');return}const button=$('#askTutor');button.disabled=true;button.firstChild.textContent='Researching… ';
-  try{const result=await api('/api/tutor',{topic:state.research.topic,question,course:state.course});const panel=$('#tutorAnswer');panel.classList.remove('hidden');panel.innerHTML=`<b>${escapeHtml(result.mode)}</b><p>${escapeHtml(result.answer)}</p><span>Checked ${new Date(result.checkedAt).toLocaleString()}</span><div>${result.sources.slice(0,6).map(source=>`<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)}</a>`).join('')}</div>`;$('#researchWatchText').textContent=`Tutor research checked ${result.sources.length} current sources at ${new Date(result.checkedAt).toLocaleTimeString()}.`;toast(`Tutor researched ${result.sources.length} sources before answering.`)}catch(error){toast(`Tutor research failed: ${error.message}`,'error')}finally{button.disabled=false;button.firstChild.textContent='Research & answer '}
+  try{const result=await api('/api/tutor',{topic:state.research.topic,question,course:state.course});await persistState({type:'tutor',courseId:state.courseRecord?.id,question,result});const panel=$('#tutorAnswer');panel.classList.remove('hidden');panel.innerHTML=`<b>${escapeHtml(result.mode)}</b><p>${escapeHtml(result.answer)}</p><span>Checked ${new Date(result.checkedAt).toLocaleString()}</span><div>${result.sources.slice(0,6).map(source=>`<a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)}</a>`).join('')}</div>`;$('#researchWatchText').textContent=`Tutor research checked ${result.sources.length} current sources at ${new Date(result.checkedAt).toLocaleTimeString()}.`;toast(`Tutor researched ${result.sources.length} sources before answering.`)}catch(error){toast(`Tutor research failed: ${error.message}`,'error')}finally{button.disabled=false;button.firstChild.textContent='Research & answer '}
 });
 $('#completeLesson').addEventListener('click',()=>{state.progress=Math.min(100,state.progress+7);$('#progressFill').style.width=state.progress+'%';$('#percentLabel').textContent=state.progress+'%';toast('Lesson complete · progress saved for this session')});
-$('#addNote').addEventListener('click',()=>{const note=prompt('Add a course note:');if(note){const notes=JSON.parse(localStorage.getItem('materia-notes')||'[]');notes.push({topic:state.research?.topic,note,createdAt:new Date().toISOString()});localStorage.setItem('materia-notes',JSON.stringify(notes));$('#noteCount').textContent=notes.length;toast('Note saved locally.')}});
-$('#notesBtn').addEventListener('click',()=>toast(`${JSON.parse(localStorage.getItem('materia-notes')||'[]').length} notes saved locally.`));
+$('#addNote').addEventListener('click',async()=>{const note=prompt('Add a course note:');if(note){const saved=await persistState({type:'note',courseId:state.courseRecord?.id,topic:state.research?.topic||state.course?.title||'Untitled topic',note});state.notes.push(saved?.note||{topic:state.research?.topic,note,createdAt:new Date().toISOString()});$('#noteCount').textContent=state.notes.length;toast(state.persistence?'Note saved to the learner record.':'Note kept for this session; persistence API unavailable.')}});
+$('#notesBtn').addEventListener('click',()=>toast(`${state.notes.length} note(s) in the learner record.`));
 $('#glossaryBtn').addEventListener('click',()=>toast('Glossary is built from the current source map after course generation.'));
 $('#mobileMenu').addEventListener('click',()=>$('.course-sidebar').classList.toggle('open'));
 $('.grading-trace')?.addEventListener('click',event=>{if(event.target.tagName!=='BUTTON')return;if(event.target.textContent.includes('revision'))toast(`${state.attempts.length} graded attempt(s) in this session${state.attempts.length>1?` · change ${state.attempts.at(-1).score-state.attempts.at(-2).score>=0?'+':''}${state.attempts.at(-1).score-state.attempts.at(-2).score} points`:''}.`);else toast(`${event.target.textContent}: grading traces combine the submitted response, named course sources, and a fresh Crossref query.`)});
