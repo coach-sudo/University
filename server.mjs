@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
-const OPENAI_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_KEY = process.env.OPENAI_API_KEY || process.env.NETLIFY_AI_GATEWAY_KEY || '';
+const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || process.env.NETLIFY_AI_GATEWAY_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/,'');
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
 const YOUTUBE_KEY = process.env.YOUTUBE_API_KEY || '';
 const USER_AGENT = 'MateriaUniversity/0.2 (local research prototype)';
@@ -28,6 +29,10 @@ async function fetchJson(url, options={}) {
     if(!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     return await response.json();
   } finally { clearTimeout(timeout); }
+}
+
+function timeoutAfter(ms,message) {
+  return new Promise((_,reject)=>setTimeout(()=>reject(new Error(message)),ms));
 }
 
 const stripTags = value => String(value||'').replace(/<[^>]*>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
@@ -71,7 +76,7 @@ async function searchBooks(topic) {
 
 async function searchTools(topic) {
   const data=await fetchJson(`https://api.github.com/search/repositories?q=${encodeURIComponent(topic)}&sort=stars&order=desc&per_page=8`,{headers:{'accept':'application/vnd.github+json','x-github-api-version':'2022-11-28'}});
-  return (data.items||[]).slice(0,6).map(repo=>({id:`github:${repo.id}`,kind:'tool',title:repo.name,description:repo.description||'Open-source project',url:repo.html_url,stars:repo.stargazers_count,language:repo.language,updated:repo.updated_at,owner:repo.owner?.login,quality:'Open-source tool'}));
+  return (data.items||[]).slice(0,6).map(repo=>({id:`github:${repo.id}`,kind:'tool',title:repo.name,description:String(repo.description||'Open-source project').slice(0,500),url:repo.html_url,stars:repo.stargazers_count,language:repo.language,updated:repo.updated_at,owner:repo.owner?.login,quality:'Open-source tool'}));
 }
 
 function collectVideoRenderers(root) {
@@ -93,7 +98,7 @@ async function searchVideos(topic) {
   if(!match) return [];
   const renderers=collectVideoRenderers(JSON.parse(match[1])); const seen=new Set();
   return renderers.filter(v=>v.videoId&&!seen.has(v.videoId)&&seen.add(v.videoId)).map(v=>({
-    id:v.videoId,kind:'video',title:v.title?.runs?.map(r=>r.text).join('')||'YouTube lecture',channel:v.ownerText?.runs?.[0]?.text||'YouTube',description:v.descriptionSnippet?.runs?.map(r=>r.text).join('')||'',url:`https://www.youtube.com/watch?v=${v.videoId}`,embed:`https://www.youtube-nocookie.com/embed/${v.videoId}`,thumbnail:v.thumbnail?.thumbnails?.at(-1)?.url||`https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,provider:'YouTube web result'
+    id:v.videoId,kind:'video',title:v.title?.runs?.map(r=>r.text).join('')||'YouTube lecture',channel:v.ownerText?.runs?.[0]?.text||'YouTube',description:String(v.descriptionSnippet?.runs?.map(r=>r.text).join('')||'').slice(0,500),url:`https://www.youtube.com/watch?v=${v.videoId}`,embed:`https://www.youtube-nocookie.com/embed/${v.videoId}`,thumbnail:v.thumbnail?.thumbnails?.at(-1)?.url||`https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,provider:'YouTube web result'
   })).map(video=>({...video,qualityScore:(/(university|college|institute|institution|association|museum|academy|extension|master gardener)/i.test(video.channel)?20:0)+(/lecture|course|introduction|explained|101|ecosystem|seminar/i.test(video.title)?12:0)})).sort((a,b)=>b.qualityScore-a.qualityScore).filter((video,index,array)=>array.findIndex(x=>x.title.toLowerCase()===video.title.toLowerCase())===index).slice(0,6);
 }
 
@@ -103,7 +108,7 @@ async function extractMaterials(materials=[]) {
     if(item.text) { out.push({name:item.name,type:item.type||'text',text:String(item.text).slice(0,60000)}); continue; }
     if(item.base64&&item.type==='application/pdf') {
       try {
-        const pdfjs=await import('file:///C:/Users/dariu/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/pdfjs-dist/legacy/build/pdf.mjs');
+        const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');
         const doc=await pdfjs.getDocument({data:Uint8Array.from(Buffer.from(item.base64,'base64'))}).promise; const pages=[];
         for(let i=1;i<=Math.min(doc.numPages,80);i++){const page=await doc.getPage(i);const content=await page.getTextContent();pages.push(content.items.map(x=>x.str).join(' '));}
         out.push({name:item.name,type:item.type,text:pages.join('\n').slice(0,120000)});
@@ -130,6 +135,10 @@ function compareResearch(previous={},fresh={}) {
   keys.forEach(key=>(previous[key]||[]).forEach(item=>before.set(`${key}:${item.id||item.url||item.title}`,item)));
   keys.forEach(key=>(fresh[key]||[]).forEach(item=>after.set(`${key}:${item.id||item.url||item.title}`,item)));
   return {checkedAt:fresh.queriedAt,newSources:[...after.entries()].filter(([id])=>!before.has(id)).map(([,item])=>item),removedSources:[...before.entries()].filter(([id])=>!after.has(id)).map(([,item])=>item),previousCount:before.size,currentCount:after.size};
+}
+
+function countResearchSources(research={}) {
+  return ['papers','references','books','videos','tools'].reduce((count,key)=>count+(Array.isArray(research[key])?research[key].length:0),0);
 }
 
 async function refreshResearch(previous) {
@@ -162,17 +171,37 @@ function extractResponseText(data) {
   return '';
 }
 
+async function openaiResponses(payload) {
+  if(!OPENAI_KEY) throw new Error('AI synthesis is not configured');
+  const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),20000);
+  try {
+    const response=await fetch(`${OPENAI_BASE_URL}/responses`,{method:'POST',signal:controller.signal,headers:{'authorization':`Bearer ${OPENAI_KEY}`,'content-type':'application/json'},body:JSON.stringify(payload)});
+    const text=await response.text();
+    let data={};
+    try { data=text?JSON.parse(text):{}; } catch { data={error:text}; }
+    if(!response.ok) {
+      const message=data?.error?.message||data?.error||text||response.statusText;
+      throw new Error(`OpenAI ${response.status}: ${String(message).slice(0,300)}`);
+    }
+    return data;
+  } catch(error) {
+    if(error.name==='AbortError') throw new Error('OpenAI request timed out');
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
+
 async function aiCourse(research,weeks,answers) {
-  const compact={topic:research.topic,summary:research.summary,papers:research.papers.slice(0,12).map(({title,authors,year,venue,citations,url,abstract})=>({title,authors,year,venue,citations,url,abstract})),books:research.books.slice(0,5),videos:research.videos.slice(0,5).map(({title,channel,url})=>({title,channel,url})),tools:research.tools.slice(0,5).map(({title,description,url,stars})=>({title,description,url,stars})),materials:research.materials.map(m=>({name:m.name,text:m.text.slice(0,12000)}))};
+  const compact={topic:research.topic,summary:String(research.summary||'').slice(0,1200),papers:research.papers.slice(0,8).map(({title,authors,year,venue,citations,url,abstract})=>({title,authors,year,venue,citations,url,abstract:String(abstract||'').slice(0,700)})),books:research.books.slice(0,4),videos:research.videos.slice(0,4).map(({title,channel,url})=>({title,channel,url})),tools:research.tools.slice(0,4).map(({title,description,url,stars})=>({title,description:String(description||'').slice(0,500),url,stars})),materials:research.materials.map(m=>({name:m.name,text:m.text.slice(0,8000)}))};
   const prompt=`You are the curriculum architect for an advanced AI university. Build a rigorous ${weeks}-week course. Respect the learner answers ${JSON.stringify(answers)}. Use only claims supported by the supplied source map; cite source URLs beside claims. Treat uploaded material as the learner's perspective, not automatically as fact. Include 5 modules with 3 lessons each, a detailed first lesson, multimodal activities, a capstone, and a five-part grading rubric. Return ONLY valid JSON matching the structure of this example (content may differ): ${JSON.stringify(fallbackCourse(research,weeks,answers))}\nSOURCE MAP:\n${JSON.stringify(compact)}`;
-  const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'authorization':`Bearer ${OPENAI_KEY}`,'content-type':'application/json'},body:JSON.stringify({model:OPENAI_MODEL,input:prompt,reasoning:{effort:'medium'},max_output_tokens:12000})});
-  if(!response.ok) throw new Error(`OpenAI ${response.status}: ${(await response.text()).slice(0,300)}`);
-  const text=extractResponseText(await response.json()).trim().replace(/^```json\s*/,'').replace(/```$/,'');
+  const text=extractResponseText(await openaiResponses({model:OPENAI_MODEL,input:prompt,reasoning:{effort:'low'},max_output_tokens:6000})).trim().replace(/^```json\s*/,'').replace(/```$/,'');
   const course=JSON.parse(text); course.mode=`ai:${OPENAI_MODEL}`; return course;
 }
 
 async function buildCourse(input) {
-  const {research,delta}=await refreshResearch(input.research);const base=fallbackCourse(research,Number(input.weeks||12),input.answers||{});
+  let refresh;
+  try { refresh=await Promise.race([refreshResearch(input.research),timeoutAfter(9000,'Research refresh timed out during course generation')]); }
+  catch(error) { refresh={research:input.research,delta:{checkedAt:new Date().toISOString(),newSources:[],removedSources:[],previousCount:0,currentCount:countResearchSources(input.research),error:error.message}}; }
+  const {research,delta}=refresh;const base=fallbackCourse(research,Number(input.weeks||12),input.answers||{});
   const decorate=course=>({...course,liveResearch:research,researchAudit:{stage:'course-generation',...delta}});
   if(!OPENAI_KEY) return decorate({...base,notice:'Research was refreshed during generation. AI synthesis is not configured, so the course was assembled deterministically from the current source map.'});
   try { return decorate(await aiCourse(research,Number(input.weeks||12),input.answers||{})); }
@@ -211,28 +240,36 @@ async function researchTutor(input) {
   const papers=paperResult.status==='fulfilled'?paperResult.value.slice(0,6):[];const references=referenceResult.status==='fulfilled'?referenceResult.value.slice(0,2):[];const sources=[...papers,...references];
   if(OPENAI_KEY){
     const prompt=`You are a rigorous university tutor. Answer the learner's question using only the supplied current sources. Separate established evidence, reasonable inference, and uncertainty. Cite URLs inline. If the sources are insufficient, say so and propose a better research question. Topic: ${topic}\nQuestion: ${question}\nSources: ${JSON.stringify(sources.map(({title,authors,year,venue,url,abstract,description,citations})=>({title,authors,year,venue,url,abstract,description,citations})))}`;
-    const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'authorization':`Bearer ${OPENAI_KEY}`,'content-type':'application/json'},body:JSON.stringify({model:OPENAI_MODEL,input:prompt,reasoning:{effort:'medium'},max_output_tokens:2500})});
-    if(response.ok)return{mode:`ai:${OPENAI_MODEL} + live research`,answer:extractResponseText(await response.json()),sources,checkedAt:new Date().toISOString()};
+    try{return{mode:`ai:${OPENAI_MODEL} + live research`,answer:extractResponseText(await openaiResponses({model:OPENAI_MODEL,input:prompt,reasoning:{effort:'low'},max_output_tokens:1500})),sources,checkedAt:new Date().toISOString()};}
+    catch(error){sources.unshift({id:'ai-error',kind:'reference',title:'AI synthesis unavailable',description:error.message,url:null,quality:'Runtime status'});}
   }
   const lead=references[0]?.description||papers.find(p=>p.abstract)?.abstract;
   return{mode:'research-brief (AI not configured)',answer:lead?`The fresh search found this useful starting point: ${lead} The evidence set below should be compared before drawing a firm conclusion.`:`The fresh search did not return enough explanatory text to answer responsibly. Review the sources below or narrow the question.`,sources,checkedAt:new Date().toISOString()};
 }
 
+export async function routeApi(method,pathname,body={}) {
+  if(method==='GET'&&pathname==='/api/status') return {live:true,aiConfigured:Boolean(OPENAI_KEY),aiModel:OPENAI_KEY?OPENAI_MODEL:null,youtubeOfficial:Boolean(YOUTUBE_KEY),researchProviders:['Crossref','Wikipedia','Open Library','GitHub',YOUTUBE_KEY?'YouTube Data API':'YouTube web results']};
+  if(method==='POST'&&pathname==='/api/research') return await researchTopic(body);
+  if(method==='POST'&&pathname==='/api/research/refresh') return await refreshResearch(body.research);
+  if(method==='POST'&&pathname==='/api/course') return await buildCourse(body);
+  if(method==='POST'&&pathname==='/api/grade') return await gradeResponse(body);
+  if(method==='POST'&&pathname==='/api/tutor') return await researchTutor(body);
+  if(method==='POST'&&pathname==='/api/source') return await resolveSource(body);
+  if(method==='GET'&&pathname==='/api/health') return {ok:true,time:new Date().toISOString()};
+  return null;
+}
+
 async function route(req,res) {
   const url=new URL(req.url,`http://${req.headers.host}`);
   try {
-    if(req.method==='GET'&&url.pathname==='/api/status') return json(res,200,{live:true,aiConfigured:Boolean(OPENAI_KEY),aiModel:OPENAI_KEY?OPENAI_MODEL:null,youtubeOfficial:Boolean(YOUTUBE_KEY),researchProviders:['Crossref','Wikipedia','Open Library','GitHub',YOUTUBE_KEY?'YouTube Data API':'YouTube web results']});
-    if(req.method==='POST'&&url.pathname==='/api/research') return json(res,200,await researchTopic(await readJson(req)));
-    if(req.method==='POST'&&url.pathname==='/api/research/refresh') return json(res,200,await refreshResearch((await readJson(req)).research));
-    if(req.method==='POST'&&url.pathname==='/api/course') return json(res,200,await buildCourse(await readJson(req)));
-    if(req.method==='POST'&&url.pathname==='/api/grade') return json(res,200,await gradeResponse(await readJson(req)));
-    if(req.method==='POST'&&url.pathname==='/api/tutor') return json(res,200,await researchTutor(await readJson(req)));
-    if(req.method==='POST'&&url.pathname==='/api/source') return json(res,200,await resolveSource(await readJson(req)));
-    if(req.method==='GET'&&url.pathname==='/api/health') return json(res,200,{ok:true,time:new Date().toISOString()});
+    const apiResult=await routeApi(req.method,url.pathname,req.method==='POST'?await readJson(req):{});
+    if(apiResult) return json(res,200,apiResult);
     const relative=url.pathname==='/'?'index.html':decodeURIComponent(url.pathname.slice(1)); const safe=normalize(relative).replace(/^(\.\.(\/|\\|$))+/,''); const file=join(ROOT,safe);
     if(!file.startsWith(ROOT)) return json(res,403,{error:'Forbidden'});
     const info=await stat(file); if(!info.isFile()) throw new Error('Not found'); const data=await readFile(file); const type={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.png':'image/png','.svg':'image/svg+xml'}[extname(file)]||'application/octet-stream'; res.writeHead(200,{'content-type':type,'cache-control':'no-store'}); res.end(data);
   } catch(error) { json(res,error.message==='Not found'?404:500,{error:error.message}); }
 }
 
-http.createServer(route).listen(PORT,'127.0.0.1',()=>console.log(`Materia live at http://127.0.0.1:${PORT}`));
+if(import.meta.url===`file://${process.argv[1]}`) {
+  http.createServer(route).listen(PORT,'127.0.0.1',()=>console.log(`Materia live at http://127.0.0.1:${PORT}`));
+}
