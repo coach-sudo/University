@@ -3,11 +3,17 @@ const $$=selector=>[...document.querySelectorAll(selector)];
 const views=['builder','research','length','course'];
 const state={status:null,research:null,course:null,courseRecord:null,materials:[],weeks:12,progress:0,activeSourceFilter:'all',attempts:[],notes:[],watchTimer:null,watchBusy:false,persistence:false};
 
-function showView(id){views.forEach(view=>$(`#${view}`).classList.toggle('hidden',view!==id));window.scrollTo(0,0)}
+function showView(id,updateHash=true){
+  let target=views.includes(id)?id:'builder';
+  if(target==='course'&&!state.course)target='builder';
+  views.forEach(view=>$(`#${view}`).classList.toggle('hidden',view!==target));
+  if(updateHash&&location.hash!==`#${target}`)history.pushState(null,'',`#${target}`);
+  window.scrollTo(0,0);
+}
 function toast(message,type='info'){const el=$('#toast');el.textContent=message;el.dataset.type=type;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000)}
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
 function compact(value='',limit=42){value=String(value);return value.length>limit?value.slice(0,limit-1)+'…':value}
-function allSources(){if(!state.research)return[];return [...state.research.papers,...state.research.books,...state.research.references,...state.research.videos,...state.research.tools,...state.research.materials.filter(x=>x.text).map((x,i)=>({id:`material:${i}`,kind:'material',title:x.name,description:'Learner-provided source material',quality:'Uploaded material'}))]}
+function allSources(){if(!state.research)return[];return [...(state.research.papers||[]),...(state.research.books||[]),...(state.research.references||[]),...(state.research.videos||[]),...(state.research.tools||[]),...(state.research.materials||[]).filter(x=>x.text).map((x,i)=>({id:`material:${i}`,kind:'material',title:x.name,description:'Learner-provided source material',quality:'Uploaded material'}))]}
 
 async function api(path,body){
   const response=await fetch(path,{method:body?'POST':'GET',headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
@@ -32,6 +38,8 @@ async function loadPersistentState(){
   if(!saved?.course)return;
   state.courseRecord=saved.course;
   state.course=saved.course.courseGraph;
+  state.research=state.course.liveResearch||state.course.research||state.courseRecord?.courseGraph?.liveResearch||null;
+  state.weeks=saved.course.weeks||state.weeks;
   state.attempts=(saved.attempts||[]).map(attempt=>({score:attempt.score,feedback:attempt.feedback,dimensions:attempt.dimensions,trace:attempt.trace,submittedAt:attempt.createdAt}));
   state.notes=saved.notes||[];
   $('#noteCount').textContent=state.notes.length;
@@ -48,8 +56,17 @@ async function loadStatus(){
     const banner=document.createElement('div');banner.className='system-banner offline';banner.innerHTML='<i></i><div><b>Backend is not running</b><span>Open http://127.0.0.1:4173 — the file:// page cannot perform research.</span></div>';$('#courseForm').prepend(banner);
   }
   await loadPersistentState();
+  routeFromHash();
 }
 
+function routeFromHash(){
+  const requested=location.hash.replace(/^#/,'');
+  if(requested==='course'&&state.course&&state.research){renderCourse();startResearchWatch();showView('course',false);return}
+  showView(views.includes(requested)?requested:'builder',false);
+}
+
+window.addEventListener('hashchange',routeFromHash);
+$$('.brand').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();showView('builder')}));
 $$('.topic-examples button').forEach(button=>button.addEventListener('click',()=>{$('#topic').value=button.textContent;$('#topic').focus()}));
 
 async function readFileForResearch(file){
@@ -165,7 +182,7 @@ function renderSourceLibrary(){
 }
 
 function removeSource(id){
-  for(const key of ['papers','books','references','videos','tools']){const index=state.research[key].findIndex(x=>String(x.id)===String(id));if(index>=0){state.research[key].splice(index,1);break}}
+  for(const key of ['papers','books','references','videos','tools']){const index=(state.research[key]||[]).findIndex(x=>String(x.id)===String(id));if(index>=0){state.research[key].splice(index,1);break}}
   renderSourceLibrary();$('#sourceTotal').textContent=allSources().length;$('#drawerCount').textContent=allSources().length;$('#syncTitle').textContent='Course evidence changed';$('#syncText').textContent='Rebuild the course to regenerate affected lessons from the revised source map.';toast('Source removed. Rebuild to resynthesize affected lessons.');
 }
 

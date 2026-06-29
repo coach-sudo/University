@@ -1,0 +1,51 @@
+[build]
+publish = "."
+functions = "netlify/functions"
+
+[database.migrations]
+path = "netlify/database/migrations"
+
+[[redirects]]
+from = "/api/status"
+to = "/.netlify/functions/api-status"
+status = 200
+
+[[redirects]]
+from = "/api/health"
+to = "/.netlify/functions/api-health"
+status = 200
+
+[[redirects]]
+from = "/api/research"
+to = "/.netlify/functions/api-research"
+status = 200
+
+[[redirects]]
+from = "/api/research/refresh"
+to = "/.netlify/functions/api-research-refresh"
+status = 200
+
+[[redirects]]
+from = "/api/course"
+to = "/.netlify/functions/api-course"
+status = 200
+
+[[redirects]]
+from = "/api/grade"
+to = "/.netlify/functions/api-grade"
+status = 200
+
+[[redirects]]
+from = "/api/tutor"
+to = "/.netlify/functions/api-tutor"
+status = 200
+
+[[redirects]]
+from = "/api/source"
+to = "/.netlify/functions/api-source"
+status = 200
+
+[[redirects]]
+from = "/api/prototype-state"
+to = "/.netlify/functions/prototype-state"
+status = 200

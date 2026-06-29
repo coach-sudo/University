@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "@netlify/database": "^1.1.0",
-    "drizzle-orm": "^1.0.0-beta.22"
+    "drizzle-orm": "^1.0.0-beta.22",
+    "pdfjs-dist": "^6.1.200"
   },
   "devDependencies": {
     "@netlify/functions": "^5.3.0",
