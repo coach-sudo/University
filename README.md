@@ -27,6 +27,7 @@ Do not place keys in `app.js`, `server.mjs`, or browser storage.
 
 ## What is live
 
+- Netlify Database schema for durable prototype learner, course, research, evidence, attempt, note, tutor, and provenance records
 - Crossref journal-record search with local relevance and noise filtering
 - Wikipedia overview discovery
 - Open Library book discovery
@@ -41,8 +42,13 @@ Do not place keys in `app.js`, `server.mjs`, or browser storage.
 - Research Watch with manual checks and five-minute in-course polling
 - Source-map diffs showing additions and removals
 - Optional OpenAI Responses API course synthesis
+- Server-side persistence for generated courses, grading attempts, learner notes, tutor conversations, and evidence traces when deployed on Netlify
 
 See [AI_UNIVERSITY_BLUEPRINT.md](AI_UNIVERSITY_BLUEPRINT.md) for the production architecture and remaining work.
+
+## Persistence
+
+The deployed Netlify app uses `@netlify/database` with Drizzle schema definitions in `db/schema.ts`. Migrations are generated under `netlify/database/migrations/` and applied by Netlify. The current prototype stores a single demo learner record plus generated course graphs, research snapshots, evidence sources, grading attempts, notes, tutor conversations, and provenance traces.
 
 ## Important limits
 
